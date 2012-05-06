@@ -3504,8 +3504,9 @@ public class Bpmn2JsonUnmarshaller {
     }
     
     protected void applyUserTaskProperties(UserTask task, Map<String, String> properties) {
-        if(properties.get("actors") != null && properties.get("actors").length() > 0) {
-            String[] allActors = properties.get("actors").split( ",\\s*" );
+        String actorsString = properties.get("actors");
+		if(actorsString != null && actorsString.length() > 0) {
+            String[] allActors = actorsString.contains("#{") ? new String[] {actorsString} : actorsString.split( ",\\s*" );
             for(String actor : allActors) {
                 PotentialOwner po = Bpmn2Factory.eINSTANCE.createPotentialOwner();
                 ResourceAssignmentExpression rae = Bpmn2Factory.eINSTANCE.createResourceAssignmentExpression();
