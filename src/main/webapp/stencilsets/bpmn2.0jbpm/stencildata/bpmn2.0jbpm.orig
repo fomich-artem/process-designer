@@ -1728,6 +1728,11 @@
 					"fortasktypes":"None|Send|Receive|User|Manual|Service|Script",
 					"items": [
 						{
+							"id": "c0",
+							"title":"groovy",
+							"value":"groovy"
+						},
+						{
 							"id": "c1",
 							"title":"java",
 							"value":"java"

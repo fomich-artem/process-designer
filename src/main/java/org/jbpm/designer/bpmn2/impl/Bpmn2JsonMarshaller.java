@@ -1214,6 +1214,8 @@ public class Bpmn2JsonMarshaller {
                     formatToWrite = "java";
                 } else if(format.equals("http://www.mvel.org/2.0")) {
                     formatToWrite = "mvel";
+                } else if (format.equals("http://groovy.codehaus.org/groovy")) {
+                	formatToWrite = "groovy";
                 } else {
                 	// default to java
                     formatToWrite = "java";
