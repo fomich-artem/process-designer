@@ -4325,6 +4325,8 @@ public class Bpmn2JsonUnmarshaller {
                     languageStr = "http://www.mvel.org/2.0";
                 } else if(properties.get("conditionexpressionlanguage").equals("java")) {
                     languageStr = "http://www.java.com/java";
+                } else if(properties.get("conditionexpressionlanguage").equals("groovy")) {
+                    languageStr = "http://groovy.codehaus.org/groovy";
                 } else {
                     // default to mvel
                     languageStr = "http://www.mvel.org/2.0";

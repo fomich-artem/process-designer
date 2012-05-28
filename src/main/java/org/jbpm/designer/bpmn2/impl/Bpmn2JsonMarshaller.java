@@ -2161,6 +2161,8 @@ public class Bpmn2JsonMarshaller {
     	            cdStr = "drools";
     	        } else if(cd.equalsIgnoreCase("http://www.mvel.org/2.0")) {
     	            cdStr = "mvel";
+                } else if (cd.equalsIgnoreCase("http://groovy.codehaus.org/groovy")) {
+    	            cdStr = "groovy";
     	        } else {
     	            // default to mvel
     	            cdStr = "mvel";
