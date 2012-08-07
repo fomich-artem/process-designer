@@ -294,7 +294,17 @@ ORYX.Plugins.ShapeMenuPlugin = {
 	
 	editTaskForm: function() {
 		var taskname = this.currentShapes[0].properties['oryx-taskname'];
-		if(taskname && taskname.length > 0) {
+		var processJSON = ORYX.EDITOR.getSerializedJSON();
+		var processId = jsonPath(processJSON.evalJSON(), "$.properties.id");
+		var packageName = jsonPath(processJSON.evalJSON(), "$.properties.package");
+		if(taskname && taskname.length > 0 && processId && processId != "") {
+			var prefix = processId.toString();
+			if (packageName && packageName != "") {
+				packageName = packageName.toString();
+				if (prefix.indexOf(packageName + '.') == 0) 
+					prefix = prefix.substring(packageName.length + 1);
+			}
+			taskname = prefix + "-" + taskname;
 			this.facade.raiseEvent({
 	            type: ORYX.CONFIG.EVENT_TASKFORM_EDIT,
 	            tn: taskname 

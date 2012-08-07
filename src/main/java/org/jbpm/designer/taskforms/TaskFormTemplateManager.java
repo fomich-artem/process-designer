@@ -60,8 +60,10 @@ public class TaskFormTemplateManager {
             if(re instanceof Process) {
                 Process process = (Process) re;
                 if(process != null && process.getId() != null && process.getId().length() > 0) {
+                	String prefix = process.getId();
+                	if (prefix.startsWith(packageName + ".")) prefix = prefix.substring(packageName.length() + 1);
                     TaskFormInfo tfi = new TaskFormInfo();
-                    tfi.setId(process.getId() + "-taskform");
+                    tfi.setId(prefix + "-taskform");
                     if(process.getName() != null && process.getName().length() > 0 ) {
                         tfi.setProcessName(process.getName());
                     } else {
@@ -112,7 +114,7 @@ public class TaskFormTemplateManager {
                                                 if( ((FormalExpression)assignment.getTo()).getBody().equals(din.getId())) {
                                                     String taskName = ((FormalExpression)assignment.getFrom()).getBody();
                                                     if(taskName != null && taskName.length() > 0) {
-                                                        usertfi.setId(taskName + "-taskform");
+                                                        usertfi.setId(prefix + "-" + taskName + "-taskform");
                                                         usertfi.setTaskName(taskName);
                                                         validTaskName = true;
                                                     }
