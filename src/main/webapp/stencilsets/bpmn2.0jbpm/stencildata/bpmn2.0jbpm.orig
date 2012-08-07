@@ -1728,6 +1728,11 @@
 					"fortasktypes":"None|Send|Receive|User|Manual|Service|Script",
 					"items": [
 						{
+							"id": "c0",
+							"title":"groovy",
+							"value":"groovy"
+						},
+						{
 							"id": "c1",
 							"title":"java",
 							"value":"java"
@@ -3832,6 +3837,11 @@
 							"id": "c2",
 							"title": "mvel",
 							"value": "mvel"
+						},
+						{
+							"id": "c3",
+							"title": "groovy",
+							"value": "groovy"
 						}
 					]                                        
 				}
@@ -4070,6 +4080,11 @@
 							"id": "c2",
 							"title": "mvel",
 							"value": "mvel"
+						},
+						{
+							"id": "c3",
+							"title": "groovy",
+							"value": "groovy"
 						}
 					]                                        
 				},
@@ -4311,6 +4326,11 @@
 							"id": "c2",
 							"title": "mvel",
 							"value": "mvel"
+						},
+						{
+							"id": "c3",
+							"title": "groovy",
+							"value": "groovy"
 						}
 					]                                        
 				},
@@ -4553,6 +4573,11 @@
 							"id": "c2",
 							"title": "mvel",
 							"value": "mvel"
+						},
+						{
+							"id": "c3",
+							"title": "groovy",
+							"value": "groovy"
 						}
 					]                                        
 				},
@@ -10168,6 +10193,11 @@
 							"id": "c2",
 							"title": "drools",
 							"value": "drools"
+						},
+						{
+							"id": "c3",
+							"title": "groovy",
+							"value": "groovy"
 						}    
 					]  
 				},
