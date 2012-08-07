@@ -124,6 +124,8 @@ import org.eclipse.emf.ecore.util.FeatureMap;
 import org.jboss.drools.DroolsPackage;
 import org.jboss.drools.GlobalType;
 import org.jboss.drools.ImportType;
+import org.jboss.drools.MetadataType;
+import org.jboss.drools.MetaentryType;
 import org.jboss.drools.OnEntryScriptType;
 import org.jboss.drools.OnExitScriptType;
 import org.jbpm.designer.web.profile.IDiagramProfile;
@@ -1066,8 +1068,9 @@ public class Bpmn2JsonMarshaller {
             		if(associationValue == null) {
             			associationValue = "";
             		}
-            		associationBuff.append(rhsAssociation).append("=").append(associationValue);
-            		associationBuff.append(",");
+            		String replacer = associationValue.replaceAll(",", "##");
+            		associationBuff.append(rhsAssociation).append("=").append(replacer);
+                	associationBuff.append(",");
             	}
             } 
 //            else if(isBiDirectional) {
@@ -1258,6 +1261,32 @@ public class Bpmn2JsonMarshaller {
     		    sb.setLength(sb.length() - 1);
     		}
     		properties.put("actors", sb.toString());
+    		// simulation properties
+            if(task.getExtensionValues() != null && task.getExtensionValues().size() > 0) {
+    	        for(ExtensionAttributeValue extattrval : task.getExtensionValues()) {
+    	        	FeatureMap extensionElements = extattrval.getValue();
+    	            
+                    @SuppressWarnings("unchecked")
+                    List<MetadataType> metadataTypeExtensions = (List<MetadataType>) extensionElements
+                                                         .get(DroolsPackage.Literals.DOCUMENT_ROOT__METADATA, true);
+                    if(metadataTypeExtensions != null && metadataTypeExtensions.size() > 0) {
+                    	MetadataType metaType = metadataTypeExtensions.get(0);
+                    	for(Object metaEntryObj : metaType.getMetaentry()) {
+                    		MetaentryType entry = (MetaentryType) metaEntryObj;
+                    		if(entry.getName() != null && entry.getName().equals("staffavailability")) {
+                    			properties.put("staffavailability", entry.getValue());
+                    		}
+                    		if(entry.getName() != null && entry.getName().equals("workinghours")) {
+                    			properties.put("workinghours", entry.getValue());
+                    		}
+                    		if(entry.getName() != null && entry.getName().equals("costpertimeunit")) {
+                    			properties.put("costpertimeunit", entry.getValue());
+                    		}
+                    	}
+                    }
+                    
+    	        }
+            }
     	} else if (task instanceof SendTask) {
     		taskType = "Send";
     		SendTask st = (SendTask) task;
@@ -1397,8 +1426,19 @@ public class Bpmn2JsonMarshaller {
             		if(associationValue == null) {
             			associationValue = "";
             		}
-            		associationBuff.append(rhsAssociation).append("=").append(associationValue);
-            		associationBuff.append(",");
+            		
+            		// don't include properties that have their independent input editors:
+            		if(!(rhsAssociation.equals("GroupId") || 
+            		   rhsAssociation.equals("Skippable") ||
+            		   rhsAssociation.equals("Comment") || 
+            		   rhsAssociation.equals("Priority") ||
+            		   rhsAssociation.equals("Content") ||
+            		   rhsAssociation.equals("TaskName")
+            		   )) {
+            			String replacer = associationValue.replaceAll(",", "##");
+            			associationBuff.append(rhsAssociation).append("=").append(replacer);
+            			associationBuff.append(",");
+            		}
             		
             		if(rhsAssociation.equalsIgnoreCase("TaskName")) {
             			properties.put("taskname", associationValue);
@@ -1543,6 +1583,39 @@ public class Bpmn2JsonMarshaller {
                 }
                 properties.put("onexitactions", onExitStr);
             }
+        }
+        
+        // simulation properties
+        if(task.getExtensionValues() != null && task.getExtensionValues().size() > 0) {
+	        for(ExtensionAttributeValue extattrval : task.getExtensionValues()) {
+	        	FeatureMap extensionElements = extattrval.getValue();
+	            
+                @SuppressWarnings("unchecked")
+                List<MetadataType> metadataTypeExtensions = (List<MetadataType>) extensionElements
+                                                     .get(DroolsPackage.Literals.DOCUMENT_ROOT__METADATA, true);
+                if(metadataTypeExtensions != null && metadataTypeExtensions.size() > 0) {
+                	MetadataType metaType = metadataTypeExtensions.get(0);
+                	for(Object metaEntryObj : metaType.getMetaentry()) {
+                		MetaentryType entry = (MetaentryType) metaEntryObj;
+                		if(entry.getName() != null && entry.getName().equals("duration")) {
+                			properties.put("duration", entry.getValue());
+                		}
+                		if(entry.getName() != null && entry.getName().equals("timeunit")) {
+                			properties.put("timeunit", entry.getValue());
+                		}
+                		if(entry.getName() != null && entry.getName().equals("range")) {
+                			properties.put("range", entry.getValue());
+                		}
+                		if(entry.getName() != null && entry.getName().equals("standarddeviation")) {
+                			properties.put("standarddeviation", entry.getValue());
+                		}
+                		if(entry.getName() != null && entry.getName().equals("distributiontype")) {
+                			properties.put("distributiontype", entry.getValue());
+                		}
+                	}
+                }
+                
+	        }
         }
         
         // marshall the node out
@@ -1852,8 +1925,9 @@ public class Bpmn2JsonMarshaller {
             		if(associationValue == null) {
             			associationValue = "";
             		}
-            		associationBuff.append(rhsAssociation).append("=").append(associationValue);
-            		associationBuff.append(",");
+            		String replacer = associationValue.replaceAll(",", "##");
+            		associationBuff.append(rhsAssociation).append("=").append(replacer);
+                	associationBuff.append(",");
             	}
             } 
 //            else if(isBiDirectional) {
@@ -2070,6 +2144,10 @@ public class Bpmn2JsonMarshaller {
     	} else {
     	    properties.put("name", "");
     	}
+    	if(sequenceFlow.getDocumentation() != null && sequenceFlow.getDocumentation().size() > 0) {
+            properties.put("documentation", sequenceFlow.getDocumentation().get(0).getText());
+        }
+    	
     	Expression conditionExpression = sequenceFlow.getConditionExpression();
     	if (conditionExpression instanceof FormalExpression) {
     	    if(((FormalExpression) conditionExpression).getBody() != null) {
@@ -2149,6 +2227,27 @@ public class Bpmn2JsonMarshaller {
         
         if(!foundSelectable) {
         	properties.put("isselectable", "true");
+        }
+        
+        // simulation properties
+        if(sequenceFlow.getExtensionValues() != null && sequenceFlow.getExtensionValues().size() > 0) {
+	        for(ExtensionAttributeValue extattrval : sequenceFlow.getExtensionValues()) {
+	        	FeatureMap extensionElements = extattrval.getValue();
+	            
+                @SuppressWarnings("unchecked")
+                List<MetadataType> metadataTypeExtensions = (List<MetadataType>) extensionElements
+                                                     .get(DroolsPackage.Literals.DOCUMENT_ROOT__METADATA, true);
+                if(metadataTypeExtensions != null && metadataTypeExtensions.size() > 0) {
+                	MetadataType metaType = metadataTypeExtensions.get(0);
+                	for(Object metaEntryObj : metaType.getMetaentry()) {
+                		MetaentryType entry = (MetaentryType) metaEntryObj;
+                		if(entry.getName() != null && entry.getName().equals("probability")) {
+                			properties.put("probability", entry.getValue());
+                		}
+                	}
+                }
+                
+	        }
         }
     	
         marshallProperties(properties, generator);
@@ -2251,11 +2350,19 @@ public class Bpmn2JsonMarshaller {
     protected void marshallAssociation(Association association, BPMNPlane plane, JsonGenerator generator, int xOffset, int yOffset, String preProcessingData, Definitions def) throws JsonGenerationException, IOException {
     	Map<String, Object> properties = new LinkedHashMap<String, Object>();
         Iterator<FeatureMap.Entry> iter = association.getAnyAttribute().iterator();
+        boolean foundBrColor = false;
         while(iter.hasNext()) {
             FeatureMap.Entry entry = iter.next();
             if(entry.getEStructuralFeature().getName().equals("type")) {
             	properties.put("type", entry.getValue());
             }
+            if(entry.getEStructuralFeature().getName().equals("bordercolor")) {
+            	properties.put("bordercolor", entry.getValue());
+            	foundBrColor = true;
+            }
+        }
+        if(!foundBrColor) {
+        	properties.put("bordercolor", defaultSequenceflowColor);
         }
         
         marshallProperties(properties, generator);
@@ -2292,16 +2399,47 @@ public class Bpmn2JsonMarshaller {
             generator.writeEndObject();
         }
         generator.writeStartObject();
-        generator.writeObjectField("x", targetBounds.getWidth() / 2);
-        generator.writeObjectField("y", targetBounds.getHeight() / 2);
+        generator.writeObjectField("x", 0); 
+        if(sourceBounds.getY() < targetBounds.getY()) {
+        	generator.writeObjectField("y", 0);
+        } else {
+        	generator.writeObjectField("y", targetBounds.getHeight());
+        }
         generator.writeEndObject();
         generator.writeEndArray();
     }
 
     protected void marshallTextAnnotation(TextAnnotation textAnnotation, BPMNPlane plane, JsonGenerator generator, int xOffset, int yOffset, String preProcessingData, Definitions def)  throws JsonGenerationException, IOException{
     	Map<String, Object> properties = new LinkedHashMap<String, Object>();
-    	properties.put("text", textAnnotation.getText());
+    	properties.put("name", textAnnotation.getText());
     	properties.put("artifacttype", "Annotation");
+    	
+    	Iterator<FeatureMap.Entry> iter = textAnnotation.getAnyAttribute().iterator();
+    	boolean foundBrColor = false;
+    	boolean foundFontColor = false;
+        while(iter.hasNext()) {
+            FeatureMap.Entry entry = iter.next();
+            if(entry.getEStructuralFeature().getName().equals("bordercolor")) {
+            	properties.put("bordercolor", entry.getValue());
+            	foundBrColor = true;
+            }
+            if(entry.getEStructuralFeature().getName().equals("fontsize")) {
+            	properties.put("fontsize", entry.getValue());
+            	foundBrColor = true;
+            }
+            if(entry.getEStructuralFeature().getName().equals("fontcolor")) {
+            	properties.put("fontcolor", entry.getValue());
+            	foundFontColor = true;
+            }
+        }
+        
+        if(!foundBrColor) {
+        	properties.put("bordercolor", defaultBrColor);
+        }
+        
+        if(!foundFontColor) {
+        	properties.put("fontcolor", defaultFontColor);
+        }
     	
 	    marshallProperties(properties, generator);
         

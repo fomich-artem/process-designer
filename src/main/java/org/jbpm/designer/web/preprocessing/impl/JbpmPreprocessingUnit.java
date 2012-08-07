@@ -5,10 +5,12 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
@@ -46,8 +48,9 @@ import org.junit.runner.Request;
 import org.drools.process.core.datatype.DataType;
 import org.mvel2.MVEL;
 
-import sun.misc.BASE64Encoder;
+import org.apache.commons.codec.binary.Base64;
 
+import sun.misc.BASE64Encoder;
 
 /**
  * JbpmPreprocessingUnit - preprocessing unit for the jbpm profile
@@ -62,6 +65,8 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     public static final String THEME_NAME = "themes";
     public static final String THEME_EXT = ".json";
     public static final String DEFAULT_THEME_NAME = "jBPM";
+    public static final String CUSTOMEDITORS_NAME = "customeditors";
+    public static final String CUSTOMEDITORS_EXT = ".json";
     public static final String THEME_COOKIE_NAME = "designercolortheme";
     
     private String stencilPath;
@@ -75,6 +80,8 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     private String default_servicenodeicon;
     private String default_widconfigtemplate;
     private String themeInfo;
+    private String formWidgetsDir;
+    private String customEditorsInfo;
     
     public JbpmPreprocessingUnit(ServletContext servletContext) {
         stencilPath = servletContext.getRealPath("/" + STENCILSET_PATH);
@@ -87,6 +94,8 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
         default_servicenodeicon = servletContext.getRealPath(  "/defaults/defaultservicenodeicon.png");
         default_widconfigtemplate = servletContext.getRealPath("/defaults/WorkDefinitions.wid.st");
         themeInfo = servletContext.getRealPath("/defaults/themes.json");
+        formWidgetsDir = servletContext.getRealPath("/defaults/formwidgets");
+        customEditorsInfo = servletContext.getRealPath("/defaults/customeditors.json");
     }
     
     public String getOutData() {
@@ -101,15 +110,16 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     public void preprocess(HttpServletRequest req, HttpServletResponse res, IDiagramProfile profile) {
         String uuid = req.getParameter("uuid");
         outData = "";
+        Map<String, ThemeInfo> themeData = setupThemes(profile, req);
+        setupCustomEditors(profile, req);
         // check with guvnor to see what packages exist
         List<String> packageNames = findPackages(uuid, profile);
         String[] info = ServletUtil.findPackageAndAssetInfo(uuid, profile);
         
-        // set up color theme info
-        Map<String, ThemeInfo> themeData = setupThemes(profile, req);
-        System.out.println("Setting up default icons");
+        // set up form widgets
+        setupFormWidgets(profile, req);
+        // set up default icons
         setupDefaultIcons(info, profile);
-        System.out.println("End setting up default icons");
         
         // figure out which package our uuid belongs in and get back the list of configs
         Map<String, List<String>> workitemConfigInfo = findWorkitemInfoForUUID(uuid, packageNames, profile);
@@ -151,13 +161,13 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
         	workItemTemplate.setAttribute("workitemDefs", workDefinitions);
         	if(workitemConfigInfo != null && workitemConfigInfo.keySet() != null && workitemConfigInfo.keySet().size() > 0) {
         		for(String key: workitemConfigInfo.keySet()) {
-        			workItemTemplate.setAttribute("packageName", key);
+        			workItemTemplate.setAttribute("packageName", key.replaceAll("\\s",""));
         		}
         	} else {
         		workItemTemplate.setAttribute("packageName", "");
         	}
         	if(info != null && info.length == 2 && info[1] != null) {
-        		workItemTemplate.setAttribute("processName", info[1]);
+        		workItemTemplate.setAttribute("processName", info[1].replaceAll("\\s",""));
         	} else {
         		workItemTemplate.setAttribute("processName", "");
         	}
@@ -172,14 +182,14 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
         	// copy our results as the stencil json data
         	createAndWriteToFile(stencilFilePath, workItemTemplate.toString());
         	// create and parse the view svg to include config data
-            createAndParseViewSVG(workDefinitions);
+            createAndParseViewSVG(workDefinitions, profile);
         } catch( Exception e ) {
             _logger.error("Failed to setup workitems : " + e.getMessage());
         }
     }
     
     @SuppressWarnings("unchecked")
-    private void createAndParseViewSVG(Map<String, WorkDefinitionImpl> workDefinitions) {
+    private void createAndParseViewSVG(Map<String, WorkDefinitionImpl> workDefinitions, IDiagramProfile profile) {
         // first delete all existing workitem svgs
         Collection<File> workitemsvgs = FileUtils.listFiles(new File(workitemSVGFilePath), new String[] { "svg" }, true);
         if(workitemsvgs != null) {
@@ -191,6 +201,11 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
             for(Map.Entry<String, WorkDefinitionImpl> definition : workDefinitions.entrySet()) {
                 StringTemplate workItemTemplate = new StringTemplate(readFile(origWorkitemSVGFile));
                 workItemTemplate.setAttribute("workitemDef", definition.getValue());
+                String widIcon = definition.getValue().getIcon();
+                InputStream iconStream = getImageInstream(widIcon, "GET", profile);
+                BASE64Encoder enc = new sun.misc.BASE64Encoder();
+                String iconEncoded = "data:image/png;base64," + enc.encode(IOUtils.toByteArray(iconStream));
+                workItemTemplate.setAttribute("nodeicon", iconEncoded);
                 String fileToWrite = workitemSVGFilePath + definition.getValue().getName() + ".svg";
                 createAndWriteToFile(fileToWrite, workItemTemplate.toString());
             }
@@ -280,6 +295,102 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
         return resultsMap;
     }
     
+    private void setupFormWidgets(IDiagramProfile profile, HttpServletRequest req) {
+    	String formWidgetsPackageURL = ExternalInfo.getExternalProtocol(profile)
+                + "://"
+                + ExternalInfo.getExternalHost(profile)
+                + "/"
+                + profile.getExternalLoadURLSubdomain().substring(0,
+                        profile.getExternalLoadURLSubdomain().indexOf("/"))
+                + "/rest/packages/globalArea/assets/";
+    	File[] allFormWidgets = new File(formWidgetsDir).listFiles();
+    	for(File formWidget : allFormWidgets) {
+    		int extPosition = formWidget.getName().lastIndexOf(".");
+    		String widgetNameOnly = formWidget.getName().substring(0,extPosition);
+    		String widgetURL = ExternalInfo.getExternalProtocol(profile)
+                    + "://"
+                    + ExternalInfo.getExternalHost(profile)
+                    + "/"
+                    + profile.getExternalLoadURLSubdomain().substring(0,
+                            profile.getExternalLoadURLSubdomain().indexOf("/"))
+                    + "/rest/packages/globalArea/assets/" + widgetNameOnly;
+    		try {
+	    		URL checkURL = new URL(widgetURL);
+		        HttpURLConnection checkConnection = (HttpURLConnection) checkURL.openConnection();
+		        ServletUtil.applyAuth(profile, checkConnection);
+		        checkConnection.setRequestMethod("GET");
+		        checkConnection.connect();
+		        _logger.info("check connection response code: " + checkConnection.getResponseCode());
+		        if (checkConnection.getResponseCode() != 200) {
+		        	URL createURL = new URL(formWidgetsPackageURL);
+		            HttpURLConnection createConnection = (HttpURLConnection) createURL
+		                    .openConnection();
+		            ServletUtil.applyAuth(profile, createConnection);
+		            createConnection.setRequestMethod("POST");
+		            createConnection.setRequestProperty("Content-Type",
+		                    "application/octet-stream");
+		            createConnection.setRequestProperty("Accept",
+		                    "application/atom+xml");
+		            createConnection.setRequestProperty("Slug", formWidget.getName());
+		            createConnection.setDoOutput(true);
+		            createConnection.getOutputStream().write(getBytesFromFile(formWidget));
+		            createConnection.connect();
+		            _logger.info("create form widget connection response code: " + createConnection.getResponseCode());
+		        }
+    		} catch (Exception e) {
+                // we dont want to barf..just log that error happened
+                _logger.error("Error setting up form widgets: " + e.getMessage());
+            } 
+    	}
+    }
+    
+    private void setupCustomEditors(IDiagramProfile profile, HttpServletRequest req) {
+    	String customEditorsURL = ExternalInfo.getExternalProtocol(profile)
+                + "://"
+                + ExternalInfo.getExternalHost(profile)
+                + "/"
+                + profile.getExternalLoadURLSubdomain().substring(0,
+                        profile.getExternalLoadURLSubdomain().indexOf("/"))
+                + "/rest/packages/globalArea/assets/" + CUSTOMEDITORS_NAME;
+		String customEditorsAssetsURL = ExternalInfo.getExternalProtocol(profile)
+                + "://"
+                + ExternalInfo.getExternalHost(profile)
+                + "/"
+                + profile.getExternalLoadURLSubdomain().substring(0,
+                        profile.getExternalLoadURLSubdomain().indexOf("/"))
+                + "/rest/packages/globalArea/assets/";
+		
+		try {
+	        URL checkURL = new URL(customEditorsURL);
+	        HttpURLConnection checkConnection = (HttpURLConnection) checkURL
+	                .openConnection();
+	        ServletUtil.applyAuth(profile, checkConnection);
+	        checkConnection.setRequestMethod("GET");
+	        checkConnection
+	                .setRequestProperty("Accept", "application/atom+xml");
+	        checkConnection.connect();
+	        _logger.info("check connection response code: " + checkConnection.getResponseCode());
+	        if (checkConnection.getResponseCode() != 200) {
+	        	URL createURL = new URL(customEditorsAssetsURL);
+	            HttpURLConnection createConnection = (HttpURLConnection) createURL
+	                    .openConnection();
+	            ServletUtil.applyAuth(profile, createConnection);
+	            createConnection.setRequestMethod("POST");
+	            createConnection.setRequestProperty("Content-Type",
+	                    "application/octet-stream");
+	            createConnection.setRequestProperty("Accept",
+	                    "application/atom+xml");
+	            createConnection.setRequestProperty("Slug", CUSTOMEDITORS_NAME + CUSTOMEDITORS_EXT);
+	            createConnection.setDoOutput(true);
+	            createConnection.getOutputStream().write(getBytesFromFile(new File(customEditorsInfo)));
+	            createConnection.connect();
+	            _logger.info("create custom editors connection response code: " + createConnection.getResponseCode());
+	        }
+		} catch (Exception e) {
+            _logger.error(e.getMessage());
+        }
+    }
+    
     private Map<String, ThemeInfo> setupThemes(IDiagramProfile profile, HttpServletRequest req) {
     	Map<String, ThemeInfo> themeData = new HashMap<String, JbpmPreprocessingUnit.ThemeInfo>();
     	String themesURL = ExternalInfo.getExternalProtocol(profile)
@@ -332,7 +443,14 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
 	            _logger.info("create themes connection response code: " + createConnection.getResponseCode());
 	        }
 	        
-	        JSONObject themesObject =  new JSONObject(ServletUtil.streamToString(ServletUtil.getInputStreamForURL(themesSourceURL, "GET", profile)));
+	        String themesStr;
+			try {
+				themesStr = ServletUtil.streamToString(ServletUtil.getInputStreamForURL(themesSourceURL, "GET", profile));
+			} catch (Exception e) {
+				themesStr = readFile(themeInfo);
+			}
+	        
+	        JSONObject themesObject =  new JSONObject(themesStr);
 	        
 	        // get the theme name from cookie if exists or default
 	        String themeName = DEFAULT_THEME_NAME;
@@ -647,7 +765,7 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     
     private String readFile(String pathname) throws IOException {
         StringBuilder fileContents = new StringBuilder();
-        Scanner scanner = new Scanner(new File(pathname));
+        Scanner scanner = new Scanner(new File(pathname), "UTF-8");
         String lineSeparator = System.getProperty("line.separator");
         try {
             while(scanner.hasNextLine()) {        
@@ -681,7 +799,7 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     
     private void createAndWriteToFile(String file, String content) throws Exception {
         Writer output = null;
-        output = new BufferedWriter(new FileWriter(file));
+        output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
         output.write(content);
         output.close();
         _logger.info("Created file:" + file);
@@ -691,9 +809,8 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
         if (profile.getUsr() != null && profile.getUsr().trim().length() > 0
                 && profile.getPwd() != null
                 && profile.getPwd().trim().length() > 0) {
-            BASE64Encoder enc = new sun.misc.BASE64Encoder();
             String userpassword = profile.getUsr() + ":" + profile.getPwd();
-            String encodedAuthorization = enc.encode(userpassword.getBytes());
+            String encodedAuthorization = Base64.encodeBase64String(userpassword.getBytes());
             connection.setRequestProperty("Authorization", "Basic "
                     + encodedAuthorization);
         }
@@ -721,6 +838,22 @@ public class JbpmPreprocessingUnit implements IDiagramPreprocessingUnit {
     	}
     	is.close();
     	return bytes;
+    }
+    
+    public static InputStream getImageInstream(String urlLocation,
+            String requestMethod, IDiagramProfile profile) throws Exception {
+        URL url = new URL(urlLocation);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+        connection.setRequestMethod(requestMethod);
+        connection.setRequestProperty("Accept","text/html,application/xhtml+xml,application/xml,application/json,application/octet-stream,text/json,text/plain;q=0.9,*/*;q=0.8");
+
+        connection.setRequestProperty("charset", "UTF-8");
+        connection.setReadTimeout(5 * 1000);
+
+        ServletUtil.applyAuth(profile, connection);
+        connection.connect();
+        return connection.getInputStream();
     }
     
     private class ThemeInfo {

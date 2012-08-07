@@ -2,12 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.drools</groupId>
-  <artifactId>process-designer</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <artifactId>jbpm-designer</artifactId>
+  <version>2.4.0-SNAPSHOT</version>
   <packaging>war</packaging>
   
-  <description>Designer</description>
-  <url>https://github.com/tsurdilo/process-designer</url>
+  <description>jBPM Designer</description>
+  <url>https://github.com/droolsjbpm/jbpm-designer</url>
   <developers>
     <developer>
       <id>tsurdilo</id>
@@ -24,9 +24,9 @@
   </licenses>
   
   <scm>
-  	<connection>scm:git:git@github.com:tsurdilo/process-designer.git</connection>
-    <developerConnection>scm:git:git@github.com:tsurdilo/process-designer.git</developerConnection>
-    <url>https://github.com/tsurdilo/process-designer</url>
+    <connection>scm:git:git@github.com:droolsjbpm/jbpm-designer.git</connection>
+    <developerConnection>scm:git:git@github.com:droolsjbpm/jbpm-designer.git</developerConnection>
+    <url>https://github.com/droolsjbpm/jbpm-designer</url>
   </scm>
   
   <properties>
@@ -47,6 +47,12 @@
         <groupId>org.jbpm</groupId>
         <artifactId>jbpm-bpmn2</artifactId>
         <version>${jbpm.version}</version>
+        <exclusions>
+        	<exclusion>
+        		<groupId>org.slf4j</groupId>
+        		<artifactId>slf4j-log4j12</artifactId>
+        	</exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.jbpm</groupId>
@@ -66,6 +72,10 @@
         	<exclusion>
         		<groupId>jdom</groupId>
         		<artifactId>jdom</artifactId>
+        	</exclusion>
+        	<exclusion>
+        		<groupId>org.slf4j</groupId>
+        		<artifactId>slf4j-log4j12</artifactId>
         	</exclusion>
         </exclusions>
       </dependency>
@@ -230,6 +240,12 @@
         <groupId>batik</groupId>
         <artifactId>batik-ext</artifactId>
         <version>${batik.version}</version>
+        <exclusions>
+        	<exclusion>
+        		<groupId>xml-apis</groupId>
+        		<artifactId>xmlParserAPIs</artifactId>
+        	</exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>batik</groupId>
@@ -270,10 +286,6 @@
         	<exclusion>
         		<groupId>org.apache.xmlgraphics</groupId>
         		<artifactId>batik-parser</artifactId>
-        	</exclusion>
-        	<exclusion>
-        		<groupId>org.apache.xmlgraphics</groupId>
-        		<artifactId>batik-util</artifactId>
         	</exclusion>
         	<exclusion>
         		<groupId>org.apache.xmlgraphics</groupId>
@@ -441,6 +453,11 @@
         <version>3.2.1</version>
       </dependency>
       <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.5</version>
+      </dependency>
+      <dependency>
         <groupId>commons-configuration</groupId>
         <artifactId>commons-configuration</artifactId>
         <version>1.6</version>
@@ -485,6 +502,13 @@
         <version>2.5</version>
       </dependency>
 
+	  <!-- simulation -->
+	  <dependency>
+        <groupId>org.jbpm</groupId>
+        <artifactId>jbpm-simulation</artifactId>
+        <version>0.0.4-SNAPSHOT</version>
+      </dependency>
+      
       <!-- test -->
       <dependency>
         <groupId>junit</groupId>
@@ -530,6 +554,16 @@
             <configuration>
               <classifier>jboss</classifier>
               <packagingExcludes>WEB-INF/lib/antlr-2.7.7.jar,WEB-INF/lib/log4j-over-slf4j-1.5.8.jar,WEB-INF/lib/xercesImpl-2.9.1.jar,WEB-INF/lib/xml-apis-1.3.04.jar,WEB-INF/lib/xmlParserAPIs-2.0.2.jar</packagingExcludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tomcat</id>
+            <goals>
+              <goal>war</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>tomcat</classifier>
             </configuration>
           </execution>
         </executions>

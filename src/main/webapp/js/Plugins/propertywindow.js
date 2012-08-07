@@ -65,6 +65,7 @@ ORYX.Plugins.PropertyWindow = {
 
 		// the properties array
 		this.popularProperties = [];
+		this.simulationProperties = [];
 		this.properties = [];
 		
 		/* The currently selected shapes whos properties will shown */
@@ -96,8 +97,8 @@ ORYX.Plugins.PropertyWindow = {
 				renderer: this.renderer.bind(this)
 			},
 			{
-				header: "Pop",
-				dataIndex: 'popular',
+				header: "Desk",
+				dataIndex: 'groupname',
 				hidden: true,
 				sortable: true
 			}
@@ -107,27 +108,14 @@ ORYX.Plugins.PropertyWindow = {
         this.dataSource = new Ext.data.GroupingStore({
 			proxy: new Ext.data.MemoryProxy(this.properties),
 			reader: new Ext.data.ArrayReader({}, [
-				{name: 'popular'},
+				{name: 'groupname'},
 				{name: 'name'},
 				{name: 'value'},
 				{name: 'icons'},
 				{name: 'gridProperties'}
 			]),
-			sortInfo: {field: 'popular', direction: "ASC"},
-			sortData : function(f, direction){
-		        direction = direction || 'ASC';
-		        var st = this.fields.get(f).sortType;
-		        var fn = function(r1, r2){
-		            var v1 = st(r1.data['name']), v2 = st(r2.data['name']);
-					var p1 = r1.data['popular'], p2  = r2.data['popular'];
-		            return p1 && !p2 ? -1 : (!p1 && p2 ? 1 : (v1 > v2 ? 1 : (v1 < v2 ? -1 : 0)));
-		        };
-		        this.data.sort(direction, fn);
-		        if(this.snapshot && this.snapshot != this.data){
-		            this.snapshot.sort(direction, fn);
-				}
-		    },
-			groupField: 'popular'
+			sortInfo: {field: 'name', direction: "ASC"},
+			groupField: 'groupname'
         });
 		this.dataSource.load();
 		
@@ -140,8 +128,8 @@ ORYX.Plugins.PropertyWindow = {
 			colModel: this.columnModel,
 			enableHdMenu: false,
 			view: new Ext.grid.GroupingView({
-				forceFit: true,
-				groupTextTpl: '{[values.rs.first().data.popular ? ORYX.I18N.PropertyWindow.oftenUsed : ORYX.I18N.PropertyWindow.moreProps]}'
+				forceFit: true ,
+				groupTextTpl: '{[values.rs.first().data.groupname]}'
 			}),
 			
 			// the data store
@@ -233,32 +221,32 @@ ORYX.Plugins.PropertyWindow = {
 	},
 
 	beforeEdit: function(option) {
-		var editorGrid 		= this.dataSource.getAt(option.row).data.gridProperties.editor;
-		var editorRenderer 	= this.dataSource.getAt(option.row).data.gridProperties.renderer;
-
-		if(editorGrid) {
-			// Disable KeyDown
-			this.facade.disableEvent(ORYX.CONFIG.EVENT_KEYDOWN);
-
-			option.grid.getColumnModel().setEditor(1, editorGrid);
+			var editorGrid 		= this.dataSource.getAt(option.row).data.gridProperties.editor;
+			var editorRenderer 	= this.dataSource.getAt(option.row).data.gridProperties.renderer;
+	
+			if(editorGrid) {
+				// Disable KeyDown
+				this.facade.disableEvent(ORYX.CONFIG.EVENT_KEYDOWN);
+	
+				option.grid.getColumnModel().setEditor(1, editorGrid);
+				
+				editorGrid.field.row = option.row;
+				// Render the editor to the grid, therefore the editor is also available 
+				// for the first and last row
+				editorGrid.render(this.grid);
+				
+				//option.grid.getColumnModel().setRenderer(1, editorRenderer);
+				editorGrid.setSize(option.grid.getColumnModel().getColumnWidth(1), editorGrid.height);
+			} else {
+				return false;
+			}
 			
-			editorGrid.field.row = option.row;
-			// Render the editor to the grid, therefore the editor is also available 
-			// for the first and last row
-			editorGrid.render(this.grid);
+			var key = this.dataSource.getAt(option.row).data.gridProperties.propId;
 			
-			//option.grid.getColumnModel().setRenderer(1, editorRenderer);
-			editorGrid.setSize(option.grid.getColumnModel().getColumnWidth(1), editorGrid.height);
-		} else {
-			return false;
-		}
-		
-		var key = this.dataSource.getAt(option.row).data.gridProperties.propId;
-		
-		this.oldValues = new Hash();
-		this.shapeSelection.shapes.each(function(shape){
-			this.oldValues[shape.getId()] = shape.properties[key];
-		}.bind(this)); 
+			this.oldValues = new Hash();
+			this.shapeSelection.shapes.each(function(shape){
+				this.oldValues[shape.getId()] = shape.properties[key];
+			}.bind(this)); 
 	},
 
 	afterEdit: function(option) {
@@ -502,7 +490,8 @@ ORYX.Plugins.PropertyWindow = {
 	createProperties: function() {
 		this.properties = [];
 		this.popularProperties = [];
-
+		this.simulationProperties = [];
+		
 		if(this.shapeSelection.commonProperties) {
 			
 			// add new property lines
@@ -708,6 +697,20 @@ ORYX.Plugins.PropertyWindow = {
 							editorGrid = new Ext.Editor(cf);
 							break;
 							
+						case ORYX.CONFIG.TYPE_CUSTOM:
+							var cf = new Ext.form.ComplexCustomField({
+								allowBlank: pair.optional(),
+								dataSource:this.dataSource,
+								grid:this.grid,
+								row:index,
+								facade:this.facade,
+								title:pair.title(),
+								attr:attribute
+							});
+							cf.on('dialogClosed', this.dialogClosed, {scope:this, row:index, col:1,field:cf});							
+							editorGrid = new Ext.Editor(cf);
+							break;
+							
 						case ORYX.CONFIG.TYPE_ACTION:
 							var cf = new Ext.form.ComplexActionsField({
 								allowBlank: pair.optional(),
@@ -830,31 +833,61 @@ ORYX.Plugins.PropertyWindow = {
 				
 				// Push to the properties-array
 				if(pair.visible() && (pair.id() != "origbordercolor" && pair.id() != "origbgcolor" && pair.id() != "isselectable")) {
-					// Popular Properties are those with a refToView set or those which are set to be popular
-					if (pair.refToView()[0] || refToViewFlag || pair.popular()) {
-						pair.setPopular();
-					} 
-					
-					
-					if(pair.popular()) {
-						this.popularProperties.push([pair.popular(), name, attribute, icons, {
-							editor: editorGrid,
-							propId: key,
-							type: pair.type(),
-							tooltip: pair.description(),
-							renderer: editorRenderer,
-							labelProvider: this.getLabelProvider(pair)
-						}]);
+					var proceed = true;
+					if(this.shapeSelection.shapes.length == 1 && this.shapeSelection.shapes.first().getStencil().idWithoutNs() == "Task") {
+						if(pair.fortasktypes() && pair.fortasktypes().length > 0) {
+							var foundtasktype = false;
+							var tts = pair.fortasktypes().split("|");
+							for (i = 0; i < tts.size(); i++) {
+								if(tts[i] == this.shapeSelection.shapes.first().properties["oryx-tasktype"]) {
+									foundtasktype = true;
+								}
+							}
+							if(!foundtasktype) {
+								proceed = false;
+							}
+						}
 					}
-					else {					
-						this.properties.push([pair.popular(), name, attribute, icons, {
-							editor: editorGrid,
-							propId: key,
-							type: pair.type(),
-							tooltip: pair.description(),
-							renderer: editorRenderer,
-							labelProvider: this.getLabelProvider(pair)
-						}]);
+					
+					if(proceed) {
+						// Popular Properties are those with a refToView set or those which are set to be popular
+						if (pair.refToView()[0] || refToViewFlag || pair.popular()) {
+							pair.setPopular();
+						}
+						
+						if (pair.simulation()) {
+							pair.setSimulation();
+						}
+						
+						
+						if(pair.popular()) {
+							this.popularProperties.push([ORYX.I18N.PropertyWindow.oftenUsed, name, attribute, icons, {
+								editor: editorGrid,
+								propId: key,
+								type: pair.type(),
+								tooltip: pair.description(),
+								renderer: editorRenderer,
+								labelProvider: this.getLabelProvider(pair)
+							}]);
+						} else if(pair.simulation()) {
+							this.simulationProperties.push([ORYX.I18N.PropertyWindow.simulationProps, name, attribute, icons, {
+								editor: editorGrid,
+								propId: key,
+								type: pair.type(),
+								tooltip: pair.description(),
+								renderer: editorRenderer,
+								labelProvider: this.getLabelProvider(pair)
+							}]);
+						} else {	
+							this.properties.push([ORYX.I18N.PropertyWindow.moreProps, name, attribute, icons, {
+								editor: editorGrid,
+								propId: key,
+								type: pair.type(),
+								tooltip: pair.description(),
+								renderer: editorRenderer,
+								labelProvider: this.getLabelProvider(pair)
+							}]);
+						}
 					}
 				}
 
@@ -888,14 +921,12 @@ ORYX.Plugins.PropertyWindow = {
 	},
 
 	setProperties: function() {
-		var props = this.popularProperties.concat(this.properties);
-		
+		var partProps = this.popularProperties.concat(this.properties);
+		var props = partProps.concat(this.simulationProperties);
 		this.dataSource.loadData(props);
 	}
 }
 ORYX.Plugins.PropertyWindow = Clazz.extend(ORYX.Plugins.PropertyWindow);
-
-
 
 /**
  * Editor for complex type
@@ -1405,6 +1436,95 @@ Ext.form.ComplexTextField = Ext.extend(Ext.form.TriggerField,  {
 	}
 });
 
+Ext.form.ComplexCustomField = Ext.extend(Ext.form.TriggerField,  {
+	onTriggerClick : function() {
+    	if(this.disabled){
+            return;
+        }
+    	
+    	Ext.Ajax.request({
+            url: ORYX.PATH + 'customeditors',
+            method: 'POST',
+            success: function(response) {
+    	   		try {
+    	   			if(response.responseText && response.responseText.length > 0) {
+    	   				var customEditorsJSON = response.responseText.evalJSON();
+    	   				var customEditorsObj = customEditorsJSON["editors"];
+    	   				if(customEditorsObj[this.title]) {
+    	   					var dialog = new Ext.Window({ 
+    	   						layout		: 'anchor',
+    	   						autoCreate	: true, 
+    	   						title		: 'Custom Editor for ' + this.title, 
+    	   						height		: 300, 
+    	   						width		: 450, 
+    	   						modal		: true,
+    	   						collapsible	: false,
+    	   						fixedcenter	: true, 
+    	   						shadow		: true, 
+    	   						resizable   : true,
+    	   						proxyDrag	: true,
+    	   						autoScroll  : true,
+    	   						keys:[{
+    	   							key	: 27,
+    	   							fn	: function(){
+    	   									dialog.hide()
+    	   							}.bind(this)
+    	   						}],
+    	   						items : [{
+    	   					        xtype : "component",
+    	   					        id    : 'customeditorswindow',
+    	   					        autoEl : {
+    	   					            tag : "iframe",
+    	   					            src : customEditorsObj[this.title],
+    	   					            width: "100%",
+    	   					            height: "100%"
+    	   					        }
+    	   					    }],
+    	   						listeners : {
+    	   							hide: function(){
+    	   								this.fireEvent('dialogClosed', this.value);
+    	   								dialog.destroy();
+    	   							}.bind(this)				
+    	   						},
+    	   						buttons		: [{
+    	   			                text: ORYX.I18N.PropertyWindow.ok,
+    	   			                handler: function(){	 
+    	   			                	var outValue = document.getElementById('customeditorswindow').contentWindow.getEditorValue();
+    	   			                	this.setValue(outValue);
+    	   								this.dataSource.getAt(this.row).set('value', outValue)
+    	   								this.dataSource.commitChanges()
+    	   								dialog.hide();
+    	   			                }.bind(this)
+    	   			            }, {
+    	   			                text: ORYX.I18N.PropertyWindow.cancel,
+    	   			                handler: function(){
+    	   								this.setValue(this.value);
+    	   			                	dialog.hide()
+    	   			                }.bind(this)
+    	   			            }]
+    	   					});		
+    	   					dialog.show();		
+    	   					this.grid.stopEditing();
+    	   				} else {
+    	   					Ext.Msg.alert('Unable to find custom editor info for' + this.title);
+    	   				}
+    	   			} else {
+    	   				Ext.Msg.alert('Invalid Custom Editors data.');
+    	   			}
+    	   		} catch(e) {
+    	   			Ext.Msg.alert('Error applying Custom Editor data:\n' + e);
+    	   		}
+            }.bind(this),
+            failure: function(){
+            	Ext.Msg.alert('Error applying Custom Editor data.');
+            },
+            params: {
+            	profile: ORYX.PROFILE
+            }
+        });
+	}
+});
+
 Ext.form.ComplexImportsField = Ext.extend(Ext.form.TriggerField,  {
 	/**
      * If the trigger was clicked a dialog has to be opened
@@ -1722,7 +1842,7 @@ Ext.form.ComplexDataAssignmenField = Ext.extend(Ext.form.TriggerField,  {
         dataInputsTitle.push("** Data Inputs **");
         varData.push(dataInputsTitle);
         Ext.each(this.dataSource.data.items, function(item){
-        	if(item.data['name'] == "DataInputSet") {
+        	if(item.data.gridProperties.propId == "oryx-datainputset") {
         		var valueParts = item.data['value'].split(",");
         		for(var di=0; di < valueParts.length; di++) {
         			var nextPart = valueParts[di];
@@ -1747,7 +1867,7 @@ Ext.form.ComplexDataAssignmenField = Ext.extend(Ext.form.TriggerField,  {
         dataOutputsTitle.push("** Data Outputs **");
         varData.push(dataOutputsTitle);
         Ext.each(this.dataSource.data.items, function(item){
-        	if(item.data['name'] == "DataOutputSet") {
+        	if(item.data.gridProperties.propId == "oryx-dataoutputset") {
         		var valueParts = item.data['value'].split(",");
         		for(var dou=0; dou < valueParts.length; dou++) {
         			var nextPart = valueParts[dou];
@@ -1814,11 +1934,12 @@ Ext.form.ComplexDataAssignmenField = Ext.extend(Ext.form.TriggerField,  {
                             if (!dataType){
                                 dataType = "java.lang.String";
                             }
+            				var escapedp = innerParts[1].replace(/\#\#/g , ",");
                             dataassignments.add(new DataAssignment({
                                 from: innerParts[0],
                                 type: "is equal to",
                                 to: "",
-                                tostr: innerParts[1],
+                                tostr: escapedp,
                                 dataType: dataType
                             }));
     			} else if(nextPart.indexOf("->") > 0) {
@@ -1945,7 +2066,8 @@ Ext.form.ComplexDataAssignmenField = Ext.extend(Ext.form.TriggerField,  {
                 header: 'To Value',
                 width: 180,
                 dataIndex: 'tostr',
-                editor: new Ext.form.TextField({ allowBlank: true })
+                editor: new Ext.form.TextField({ allowBlank: true }),
+                renderer: Ext.util.Format.htmlEncode
     		}, itemDeleter]),
     		selModel: itemDeleter,
             autoHeight: true,
@@ -2001,24 +2123,24 @@ Ext.form.ComplexDataAssignmenField = Ext.extend(Ext.form.TriggerField,  {
                 			if(this.data["type"] == "is mapped to") {
                 				outValue += this.data['from'] + "->" + this.data['to'] + ",";
                 			} else if(this.data["type"] == "is equal to") {
-                				outValue += this.data['from'] + "=" + this.data['tostr'] + ",";
+                				var escapedc = this.data['tostr'].replace(/,/g , "##");
+                				outValue += this.data['from'] + "=" + escapedc + ",";
                 			}
                 		}
                     });
                 	if(outValue.length > 0) {
-                		outValue = outValue.slice(0, -1)
+                		outValue = outValue.slice(0, -1);
                 	}
 					this.setValue(outValue);
-					this.dataSource.getAt(this.row).set('value', outValue)
-					this.dataSource.commitChanges()
-
-					dialog.hide()
+					this.dataSource.getAt(this.row).set('value', outValue);
+					this.dataSource.commitChanges();
+					dialog.hide();
                 }.bind(this)
             }, {
                 text: ORYX.I18N.PropertyWindow.cancel,
                 handler: function(){
 					this.setValue(this.value);
-                	dialog.hide()
+                	dialog.hide();
                 }.bind(this)
             }]
 		});		
@@ -2301,6 +2423,7 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
             });
 		
 		var sourceEditor;
+		var hlLine;
 		
 		var dialog = new Ext.Window({ 
 			layout		: 'anchor',
@@ -2345,13 +2468,20 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
             }]
 		});	
 		dialog.show();		
+		this.foldFunc = CodeMirror.newFoldFunction(CodeMirror.braceRangeFinder);
 		sourceEditor = CodeMirror.fromTextArea(document.getElementById(ceta.getId()), {
 			  mode: "text/x-java",
 			  lineNumbers: true,
 			  lineWrapping: true,
 			  matchBrackets: true,
-			  extraKeys: {"Ctrl-Z": function(cm) {CodeMirror.hint(cm, CodeMirror.jbpmHint, dialog);}}
+			  onGutterClick: this.foldFunc,
+			  extraKeys: {"Ctrl-Z": function(cm) {CodeMirror.hint(cm, CodeMirror.jbpmHint, dialog);}},
+			  onCursorActivity: function() {
+				  sourceEditor.setLineClass(hlLine, null, null);
+	 			     hlLine = sourceEditor.setLineClass(sourceEditor.getCursor().line, null, "activeline");
+	 		  }.bind(this)
 			});
+		hlLine = sourceEditor.setLineClass(0, "activeline");
 		this.grid.stopEditing();
 	}
 });

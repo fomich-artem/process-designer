@@ -22,8 +22,7 @@ import org.jbpm.designer.web.profile.IDiagramProfile;
 import org.jbpm.designer.web.profile.IDiagramProfileService;
 import org.jbpm.designer.web.profile.impl.ExternalInfo;
 import org.jbpm.designer.web.profile.impl.ProfileServiceImpl;
-
-import sun.misc.BASE64Encoder;
+import org.apache.commons.codec.binary.Base64;
 
 /**
  * Utility class for web servlets.
@@ -50,6 +49,49 @@ public class ServletUtil {
         }
         return profile;
     }
+	
+	public static List<String> getFormWidgetList(IDiagramProfile profile) {
+		List<String> widgets = new ArrayList<String>();
+		String globalAreaURL = ExternalInfo.getExternalProtocol(profile)
+                + "://"
+                + ExternalInfo.getExternalHost(profile)
+                + "/"
+                + profile.getExternalLoadURLSubdomain().substring(0,
+                        profile.getExternalLoadURLSubdomain().indexOf("/"))
+                + "/rest/packages/globalArea/assets";
+		try {
+            XMLInputFactory factory = XMLInputFactory.newInstance();
+            XMLStreamReader reader = factory
+                    .createXMLStreamReader(ServletUtil.getInputStreamForURL(
+                    		globalAreaURL, "GET", profile));
+            String title = "";
+            String format = "";
+            while (reader.hasNext()) {
+                int next = reader.next();
+                if (next == XMLStreamReader.START_ELEMENT) {
+                    if ("title".equals(reader.getLocalName())) {
+                        title = reader.getElementText();
+                    }
+                    if ("format".equals(reader.getLocalName())) {
+                    	format = reader.getElementText();
+                    }
+                }
+                if (next == XMLStreamReader.END_ELEMENT) {
+                	if ("asset".equals(reader.getLocalName())) {
+                		if(title.length() > 0 && format.length() > 0 && format.equals("fw")) {
+                			widgets.add(title);
+                			title = "";
+                			format = "";
+                		}
+                	}
+                }
+            }
+        } catch (Exception e) {
+            // we dont want to barf..just log that error happened
+            _logger.error(e.getMessage());
+        }
+		return widgets;
+	}
 	
 	public static String[] findPackageAndAssetInfo(String uuid,
             IDiagramProfile profile) {
@@ -133,15 +175,8 @@ public class ServletUtil {
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
         connection.setRequestMethod(requestMethod);
-        connection
-                .setRequestProperty(
-                        "User-Agent",
-                        "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.16) Gecko/20110319 Firefox/3.6.16");
-        connection
-                .setRequestProperty("Accept",
-                        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-        connection.setRequestProperty("Accept-Language", "en-us,en;q=0.5");
-        connection.setRequestProperty("Accept-Encoding", "gzip,deflate");
+        connection.setRequestProperty("Accept","text/html,application/xhtml+xml,application/xml,application/json,application/octet-stream,text/json,text/plain;q=0.9,*/*;q=0.8");
+
         connection.setRequestProperty("charset", "UTF-8");
         connection.setReadTimeout(5 * 1000);
 
@@ -162,18 +197,15 @@ public class ServletUtil {
                 "UTF-8"));
     }
 	
-	public static void applyAuth(IDiagramProfile profile,
-			HttpURLConnection connection) {
+	public static void applyAuth(IDiagramProfile profile, HttpURLConnection connection) {
 		if (profile.getUsr() != null && profile.getUsr().trim().length() > 0
 				&& profile.getPwd() != null
 				&& profile.getPwd().trim().length() > 0) {
-			BASE64Encoder enc = new sun.misc.BASE64Encoder();
-			String userpassword = profile.getUsr() + ":" + profile.getPwd();
-			String encodedAuthorization = enc.encode(userpassword.getBytes());
-			connection.setRequestProperty("Authorization", "Basic "
-					+ encodedAuthorization);
+			String auth = profile.getUsr() + ":" + profile.getPwd();
+	        connection.setRequestProperty("Authorization", "Basic "
+	                + Base64.encodeBase64String(auth.getBytes()));
 		}
-	}
+    }
 	
 	public static boolean assetExistsInGuvnor(String packageName, String assetName, IDiagramProfile profile) {
     	try {	
@@ -215,6 +247,10 @@ public class ServletUtil {
 			//        .setRequestProperty("Accept", "application/binary");
 			checkConnection.connect();
 			_logger.info("check connection response code: " + checkConnection.getResponseCode());
+			InputStream is = checkConnection.getInputStream();
+			while(is.read() != -1) {
+				// read all response data
+			}
 			if (checkConnection.getResponseCode() == 200) {
 				return true;
 			}
