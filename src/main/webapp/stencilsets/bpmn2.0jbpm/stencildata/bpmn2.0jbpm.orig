@@ -204,13 +204,13 @@
 					"items": [
 						{
 							"id": "c1",
-							"title":"false",
-							"value":"false"
+							"title":"true",
+							"value":"true"
 						},
 						{
 							"id": "c2",
-							"title": "true",
-							"value": "true"
+							"title": "false",
+							"value": "false"
 						}
 					]                                               
 				}
@@ -257,7 +257,7 @@
 				},
 				{
 					"id":"dataoutput",
-					"type":"Dataoutput",
+					"type":"Dataoutputsingle",
 					"title":"DataOutput",
 					"value":"",
 					"description":"The Data Associations of the catch Event.",
@@ -323,7 +323,7 @@
 				},
 				{
 					"id":"datainput",
-					"type":"String",
+					"type":"Datainputsingle",
 					"title":"Data Input",
 					"value":"",
 					"description":"The Data Associations of the throw Event.",
@@ -3119,97 +3119,6 @@
 					"description_ja":"ヒューマンタスクの優先度を示す整数",
 					"readonly":false,
 					"optional":true,
-					"fortasktypes":"None|User"
-				},
-				{
-					"id":"duration",
-					"type":"String",
-					"title":"Duration",
-					"value":"",
-					"description":"The Amount of time that the task will take to execute (in time units)",
-					"description_ja":"The Amount of time that the task will take to execute (in time units)",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
-					"id":"timeunit",
-					"type":"String",
-					"title":"Time Unit",
-					"value":"",
-					"description":"Time unit options (seconds, minutes, hours)",
-					"description_ja":"Time unit options (seconds, minutes, hours)",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
-					"id":"range",
-					"type":"String",
-					"title":"Range",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
-					"id":"standarddeviation",
-					"type":"String",
-					"title":"Standard Deviation",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
-					"id":"distributiontype",
-					"type":"String",
-					"title":"Distribution Type",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
-					"id":"staffavailability",
-					"type":"String",
-					"title":"Staff Availability",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true,
-					"fortasktypes":"None|User"
-				},
-				{
-					"id":"workinghours",
-					"type":"String",
-					"title":"Working Hours",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true,
-					"fortasktypes":"None|User"
-				},
-				{
-					"id":"costpertimeunit",
-					"type":"String",
-					"title":"Cost Per Time Unit",
-					"value":"",
-					"description":"",
-					"description_ja":"",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true,
 					"fortasktypes":"None|User"
 				}
 			]
@@ -7797,6 +7706,7 @@
 			"icon":"catching/message.png",
 			"propertyPackages":[
 				"baseAttributes",
+				"catchEventAttributes",
 				"interrupting",
 				"boundaryevent",
 				"bgColor"
@@ -10213,17 +10123,6 @@
 					"min":"1"
 				},
 				{
-					"id":"probability",
-					"type":"String",
-					"title":"Probability",
-					"value":"",
-					"description":"Probability",
-					"description_ja":"Probability",
-					"readonly":false,
-					"optional":true,
-					"simulation" : true
-				},
-				{
 					"id":"isimmediate",
 					"type":"Boolean",
 					"title":"isImmediate",
@@ -10656,6 +10555,10 @@
 					},
 					{
 						"from":"Subprocess",
+						"to":["IntermediateEventOnSubprocessBoundary"]
+					},
+					{
+						"from":"ReusableSubprocess",
 						"to":["IntermediateEventOnSubprocessBoundary"]
 					}
 				]

@@ -24,6 +24,7 @@ import org.eclipse.bpmn2.EscalationEventDefinition;
 import org.eclipse.bpmn2.EventBasedGateway;
 import org.eclipse.bpmn2.EventDefinition;
 import org.eclipse.bpmn2.ExclusiveGateway;
+import org.eclipse.bpmn2.ExtensionAttributeValue;
 import org.eclipse.bpmn2.FlowElement;
 import org.eclipse.bpmn2.FlowElementsContainer;
 import org.eclipse.bpmn2.FlowNode;
@@ -49,6 +50,8 @@ import org.eclipse.bpmn2.ThrowEvent;
 import org.eclipse.bpmn2.TimerEventDefinition;
 import org.eclipse.bpmn2.UserTask;
 import org.eclipse.emf.ecore.util.FeatureMap;
+import org.jboss.drools.DroolsPackage;
+import org.jboss.drools.impl.DroolsFactoryImpl;
 import org.jbpm.designer.web.profile.IDiagramProfile;
 import org.jbpm.designer.web.server.ServletUtil;
 import org.json.JSONObject;
@@ -70,6 +73,8 @@ public class BPMN2SyntaxChecker implements SyntaxChecker {
 	}
 	
 	public void checkSyntax() {
+		DroolsFactoryImpl.init();
+		
 		Definitions def = profile.createMarshaller().getDefinitions(json, preprocessingData);
 		
 		List<RootElement> rootElements =  def.getRootElements();
@@ -236,7 +241,8 @@ public class BPMN2SyntaxChecker implements SyntaxChecker {
 		        		}
 		        	} 
 		        }
-			}
+		    }
+			
 			
 			if(fe instanceof CatchEvent) {
 				CatchEvent event = (CatchEvent) fe;
