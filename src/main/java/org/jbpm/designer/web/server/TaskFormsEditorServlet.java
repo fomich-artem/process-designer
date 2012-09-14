@@ -157,7 +157,7 @@ public class TaskFormsEditorServlet extends HttpServlet {
 		        if (checkConnection.getResponseCode() == 200) {
 		        	InputStream in = ServletUtil.getInputStreamForURL(taskFormSourceURL, "GET", profile);
 		            StringWriter writer = new StringWriter();
-		            IOUtils.copy(in, writer);
+		            IOUtils.copy(in, writer, "UTF-8");
 		            return writer.toString();
 		        }
 			} catch (Exception e) {
