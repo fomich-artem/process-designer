@@ -143,7 +143,10 @@ public class Bpmn2JsonMarshaller {
 	public static final String defaultBrColor = "#000000";
 	public static final String defaultFontColor = "#000000";
 	public static final String defaultSequenceflowColor = "#000000";
-	
+
+	public static final String LINE_SEPARATOR_REPLACEMENT = "#!#!";
+	public static final String ACTIONS_SEPARATOR = "=!=!";
+
 	private Map<String, DiagramElement> _diagramElements = new HashMap<String, DiagramElement>();
 	private Map<String,Association> _diagramAssociations = new HashMap<String, Association>();
 	private static final Logger _logger = Logger.getLogger(Bpmn2JsonMarshaller.class);
@@ -1136,7 +1139,7 @@ public class Bpmn2JsonMarshaller {
             
                 for(OnEntryScriptType onEntryScript : onEntryExtensions) {
                     onEntryStr += onEntryScript.getScript();
-                    onEntryStr += "|";
+                    onEntryStr += ACTIONS_SEPARATOR;
                 
                     if(onEntryScript.getScriptFormat() != null) {
                         String format = onEntryScript.getScriptFormat();
@@ -1156,7 +1159,7 @@ public class Bpmn2JsonMarshaller {
                 
                 for(OnExitScriptType onExitScript : onExitExtensions) {
                     onExitStr += onExitScript.getScript();
-                    onExitStr += "|";
+                    onExitStr += ACTIONS_SEPARATOR;
                     
                     if(onExitScript.getScriptFormat() != null) {
                         String format = onExitScript.getScriptFormat();
@@ -1177,14 +1180,14 @@ public class Bpmn2JsonMarshaller {
                 }
             }
             if(onEntryStr.length() > 0) {
-                if(onEntryStr.endsWith("|")) {
-                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - 1);
+                if(onEntryStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onentryactions", onEntryStr);
             }
             if(onExitStr.length() > 0) {
-                if(onExitStr.endsWith("|")) {
-                    onExitStr = onExitStr.substring(0, onExitStr.length() - 1);
+                if(onExitStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onExitStr = onExitStr.substring(0, onExitStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onexitactions", onExitStr);
             }
@@ -1515,7 +1518,7 @@ public class Bpmn2JsonMarshaller {
             
                 for(OnEntryScriptType onEntryScript : onEntryExtensions) {
                     onEntryStr += onEntryScript.getScript();
-                    onEntryStr += "|";
+                    onEntryStr += ACTIONS_SEPARATOR;
                 
                     if(onEntryScript.getScriptFormat() != null) {
                         String format = onEntryScript.getScriptFormat();
@@ -1535,7 +1538,7 @@ public class Bpmn2JsonMarshaller {
                 
                 for(OnExitScriptType onExitScript : onExitExtensions) {
                     onExitStr += onExitScript.getScript();
-                    onExitStr += "|";
+                    onExitStr += ACTIONS_SEPARATOR;
                     
                     if(onExitScript.getScriptFormat() != null) {
                         String format = onExitScript.getScriptFormat();
@@ -1556,14 +1559,14 @@ public class Bpmn2JsonMarshaller {
                 }
             }
             if(onEntryStr.length() > 0) {
-                if(onEntryStr.endsWith("|")) {
-                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - 1);
+                if(onEntryStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onentryactions", onEntryStr);
             }
             if(onExitStr.length() > 0) {
-                if(onExitStr.endsWith("|")) {
-                    onExitStr = onExitStr.substring(0, onExitStr.length() - 1);
+                if(onExitStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onExitStr = onExitStr.substring(0, onExitStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onexitactions", onExitStr);
             }
@@ -1606,6 +1609,11 @@ public class Bpmn2JsonMarshaller {
     protected void marshallNode(FlowNode node, Map<String, Object> properties, String stencil, BPMNPlane plane, JsonGenerator generator, int xOffset, int yOffset) throws JsonGenerationException, IOException {
     	if (properties == null) {
     		properties = new LinkedHashMap<String, Object>();
+    	} else {
+    		for (Map.Entry<String, Object> propertiesEntry : properties.entrySet()) {
+    			if (propertiesEntry.getValue() instanceof String)
+    				propertiesEntry.setValue(((String)propertiesEntry.getValue()).replace("\n", LINE_SEPARATOR_REPLACEMENT));
+    		}
     	}
         if(node.getDocumentation() != null && node.getDocumentation().size() > 0) {
             properties.put("documentation", node.getDocumentation().get(0).getText());
@@ -1944,7 +1952,7 @@ public class Bpmn2JsonMarshaller {
             
                 for(OnEntryScriptType onEntryScript : onEntryExtensions) {
                     onEntryStr += onEntryScript.getScript();
-                    onEntryStr += "|";
+                    onEntryStr += ACTIONS_SEPARATOR;
                 
                     if(onEntryScript.getScriptFormat() != null) {
                         String format = onEntryScript.getScriptFormat();
@@ -1964,7 +1972,7 @@ public class Bpmn2JsonMarshaller {
                 
                 for(OnExitScriptType onExitScript : onExitExtensions) {
                     onExitStr += onExitScript.getScript();
-                    onExitStr += "|";
+                    onExitStr += ACTIONS_SEPARATOR;
                     
                     if(onExitScript.getScriptFormat() != null) {
                         String format = onExitScript.getScriptFormat();
@@ -1985,14 +1993,14 @@ public class Bpmn2JsonMarshaller {
                 }
             }
             if(onEntryStr.length() > 0) {
-                if(onEntryStr.endsWith("|")) {
-                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - 1);
+                if(onEntryStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onEntryStr = onEntryStr.substring(0, onEntryStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onentryactions", onEntryStr);
             }
             if(onExitStr.length() > 0) {
-                if(onExitStr.endsWith("|")) {
-                    onExitStr = onExitStr.substring(0, onExitStr.length() - 1);
+                if(onExitStr.endsWith(ACTIONS_SEPARATOR)) {
+                    onExitStr = onExitStr.substring(0, onExitStr.length() - ACTIONS_SEPARATOR.length());
                 }
                 properties.put("onexitactions", onExitStr);
             }

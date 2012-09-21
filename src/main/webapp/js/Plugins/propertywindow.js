@@ -1728,8 +1728,10 @@ Ext.form.ComplexActionsField = Ext.extend(Ext.form.TriggerField,  {
         });
     	actions.load();
     	
+    	var actionsSeparator = "=!=!";
+
     	if(this.value.length > 0) {
-    		var valueParts = this.value.split("|");
+    		var valueParts = this.value.split(actionsSeparator);
     		for(var i=0; i < valueParts.length; i++) {
     			var nextPart = valueParts[i];
     			actions.add(new ActionDef({
@@ -1801,11 +1803,11 @@ Ext.form.ComplexActionsField = Ext.extend(Ext.form.TriggerField,  {
                 	grid.stopEditing();
                 	actions.data.each(function() {
                 		if(this.data['action'].length > 0) {
-                			outValue += this.data['action'] + "|";
+                			outValue += this.data['action'] + actionsSeparator;
                 		}
                     });
                 	if(outValue.length > 0) {
-                		outValue = outValue.slice(0, -1)
+                		outValue = outValue.slice(0, -actionsSeparator.length)
                 	}
 					this.setValue(outValue);
 					this.dataSource.getAt(this.row).set('value', outValue)
@@ -2482,10 +2484,13 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
 		if(this.disabled){
             return;
         }
+
+		var lineSeparatorReplacement = '#!#!';
+
 		var ceta = new Ext.form.TextArea({
             id: Ext.id(),
             fieldLabel: "Expression Editor",
-            value: this.value,
+            value: this.value.replace(new RegExp(lineSeparatorReplacement, 'g'), '\n'),
             autoScroll: true
             });
 		
@@ -2495,7 +2500,7 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
 		var dialog = new Ext.Window({ 
 			layout		: 'anchor',
 			autoCreate	: true, 
-			title		: 'Expression Editor - Press [Ctrl-Z] to activate auto-completion', 
+			title		: 'Expression Editor - Press [Ctrl-Space] to activate auto-completion', 
 			height		: 430, 
 			width		: 550, 
 			modal		: true,
@@ -2521,8 +2526,9 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
 			buttons		: [{
                 text: ORYX.I18N.PropertyWindow.ok,
                 handler: function(){	 
-					this.setValue(sourceEditor.getValue());
-					this.dataSource.getAt(this.row).set('value', sourceEditor.getValue());
+                	var newValue = sourceEditor.getValue().replace(/\n/g, lineSeparatorReplacement);
+                	this.setValue(newValue);
+					this.dataSource.getAt(this.row).set('value', newValue);
 					this.dataSource.commitChanges();
 					dialog.hide()
                 }.bind(this)
@@ -2542,7 +2548,7 @@ Ext.form.ComplexExpressionField = Ext.extend(Ext.form.TriggerField,  {
 			  lineWrapping: true,
 			  matchBrackets: true,
 			  onGutterClick: this.foldFunc,
-			  extraKeys: {"Ctrl-Z": function(cm) {CodeMirror.hint(cm, CodeMirror.jbpmHint, dialog);}},
+			  extraKeys: {"Ctrl-Space": function(cm) {CodeMirror.hint(cm, CodeMirror.jbpmHint, dialog);}},
 			  onCursorActivity: function() {
 				  sourceEditor.setLineClass(hlLine, null, null);
 	 			     hlLine = sourceEditor.setLineClass(sourceEditor.getCursor().line, null, "activeline");

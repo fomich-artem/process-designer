@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import org.codehaus.jackson.JsonFactory;
@@ -1989,7 +1990,7 @@ public class Bpmn2JsonUnmarshaller {
         }
         // process on-entry and on-exit actions as custom elements
         if(properties.get("onentryactions") != null && properties.get("onentryactions").length() > 0) {
-            String[] allActions = properties.get("onentryactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onentryactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnEntryScriptType onEntryScript = DroolsFactory.eINSTANCE.createOnEntryScriptType();
                 onEntryScript.setScript(wrapInCDATABlock(action));
@@ -2018,7 +2019,7 @@ public class Bpmn2JsonUnmarshaller {
         }
         
         if(properties.get("onexitactions") != null && properties.get("onexitactions").length() > 0) {
-            String[] allActions = properties.get("onexitactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onexitactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnExitScriptType onExitScript = DroolsFactory.eINSTANCE.createOnExitScriptType();
                 onExitScript.setScript(wrapInCDATABlock(action));
@@ -3252,7 +3253,7 @@ public class Bpmn2JsonUnmarshaller {
         
         // process on-entry and on-exit actions as custom elements
         if(properties.get("onentryactions") != null && properties.get("onentryactions").length() > 0) {
-            String[] allActions = properties.get("onentryactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onentryactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnEntryScriptType onEntryScript = DroolsFactory.eINSTANCE.createOnEntryScriptType();
                 onEntryScript.setScript(wrapInCDATABlock(action));
@@ -3281,7 +3282,7 @@ public class Bpmn2JsonUnmarshaller {
         }
         
         if(properties.get("onexitactions") != null && properties.get("onexitactions").length() > 0) {
-            String[] allActions = properties.get("onexitactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onexitactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnExitScriptType onExitScript = DroolsFactory.eINSTANCE.createOnExitScriptType();
                 onExitScript.setScript(wrapInCDATABlock(action));
@@ -3591,7 +3592,7 @@ public class Bpmn2JsonUnmarshaller {
         
         // process on-entry and on-exit actions as custom elements
         if(properties.get("onentryactions") != null && properties.get("onentryactions").length() > 0) {
-            String[] allActions = properties.get("onentryactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onentryactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnEntryScriptType onEntryScript = DroolsFactory.eINSTANCE.createOnEntryScriptType();
                 onEntryScript.setScript(wrapInCDATABlock(action));
@@ -3620,7 +3621,7 @@ public class Bpmn2JsonUnmarshaller {
         }
         
         if(properties.get("onexitactions") != null && properties.get("onexitactions").length() > 0) {
-            String[] allActions = properties.get("onexitactions").split( "\\|\\s*" );
+            String[] allActions = properties.get("onexitactions").split( Pattern.quote(Bpmn2JsonMarshaller.ACTIONS_SEPARATOR) );
             for(String action : allActions) {
                 OnExitScriptType onExitScript = DroolsFactory.eINSTANCE.createOnExitScriptType();
                 onExitScript.setScript(wrapInCDATABlock(action));
@@ -4139,7 +4140,8 @@ public class Bpmn2JsonUnmarshaller {
         while (parser.nextToken() != JsonToken.END_OBJECT) {
             String fieldname = parser.getCurrentName();
             parser.nextToken();
-            properties.put(fieldname, parser.getText());
+            String textValue = parser.getText();
+			properties.put(fieldname, textValue.replace(Bpmn2JsonMarshaller.LINE_SEPARATOR_REPLACEMENT, "\r\n"));
         }
         return properties;
     }
